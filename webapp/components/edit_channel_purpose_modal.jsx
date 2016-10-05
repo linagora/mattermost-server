@@ -10,7 +10,7 @@ import * as Utils from 'utils/utils.jsx';
 
 import React from 'react';
 import {Modal} from 'react-bootstrap';
-import {FormattedMessage} from 'react-intl';
+import {FormattedMessage, injectIntl} from 'react-intl';
 
 class EditChannelPurposeModal extends React.Component {
     constructor(props) {

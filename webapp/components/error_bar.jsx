@@ -8,7 +8,7 @@ import * as Utils from 'utils/utils.jsx';
 import {isLicenseExpiring, isLicenseExpired, isLicensePastGracePeriod, displayExpiryDate} from 'utils/license_utils.jsx';
 
 import React from 'react';
-import {FormattedMessage} from 'react-intl';
+import {FormattedMessage, injectIntl} from 'react-intl';
 
 const EXPIRING_ERROR = 'error_bar.expiring';
 const EXPIRED_ERROR = 'error_bar.expired';
@@ -136,3 +136,5 @@ class ErrorBar extends React.Component {
         );
     }
 }
+
+export default injectIntl(ErrorBar);

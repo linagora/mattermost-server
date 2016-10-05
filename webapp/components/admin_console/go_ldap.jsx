@@ -1,6 +1,6 @@
 import AdminSettings from './admin_settings.jsx';
 import BooleanSetting from './boolean_setting.jsx';
-import ConnectionSecurityDropdownSetting from './connection_security_dropdown_setting.jsx';
+import {ConnectionSecurityDropdownSettingLdap} from './connection_security_dropdown_setting.jsx';
 import SettingsGroup from './settings_group.jsx';
 import TextSetting from './text_setting.jsx';
 
@@ -137,7 +137,7 @@ export default class GoLdapSettings extends AdminSettings {
                     onChange={this.handleChange}
                     disabled={!this.state.enable}
                 />
-                <ConnectionSecurityDropdownSetting
+                <ConnectionSecurityDropdownSettingLdap
                     value={this.state.connectionSecurity}
                     onChange={this.handleChange}
                     disabled={!this.state.enable}
