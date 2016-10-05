@@ -12,7 +12,7 @@ import React from 'react';
 import {Modal} from 'react-bootstrap';
 import {FormattedMessage} from 'react-intl';
 
-export default class EditChannelPurposeModal extends React.Component {
+class EditChannelPurposeModal extends React.Component {
     constructor(props) {
         super(props);
 
@@ -193,3 +193,5 @@ EditChannelPurposeModal.propTypes = {
     channel: React.PropTypes.object,
     onModalDismissed: React.PropTypes.func.isRequired
 };
+
+export default injectIntl(EditChannelPurposeModal);
