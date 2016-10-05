@@ -82,7 +82,7 @@ start-docker:
 			-e LDAP_ORGANISATION="Mattermost Test" \
 			-e LDAP_DOMAIN="mm.test.com" \
 			-e LDAP_ADMIN_PASSWORD="mostest" \
-			-d osixia/openldap:1.1.2 > /dev/null;\
+			-d osixia/openldap:1.1.6 > /dev/null;\
 		sleep 10; \
 		docker exec -ti mattermost-openldap bash -c 'echo -e "dn: ou=testusers,dc=mm,dc=test,dc=com\nobjectclass: organizationalunit" | ldapadd -x -D "cn=admin,dc=mm,dc=test,dc=com" -w mostest';\
 		docker exec -ti mattermost-openldap bash -c 'echo -e "dn: uid=test.one,ou=testusers,dc=mm,dc=test,dc=com\nobjectclass: iNetOrgPerson\nsn: User\ncn: Test1\nmail: success+testone@simulator.amazonses.com" | ldapadd -x -D "cn=admin,dc=mm,dc=test,dc=com" -w mostest';\
@@ -108,7 +108,7 @@ stop-docker:
 		echo stopping mattermost-postgres; \
 		docker stop mattermost-postgres > /dev/null; \
 	fi
-	
+
 	@if [ $(shell docker ps -a | grep -ci mattermost-openldap) -eq 1 ]; then \
 		echo stopping mattermost-openldap; \
 		docker stop mattermost-openldap > /dev/null; \
@@ -139,7 +139,7 @@ check-client-style:
 	@echo Checking client style
 
 	cd $(BUILD_WEBAPP_DIR) && $(MAKE) check-style
-	
+
 check-server-style:
 	@echo Running GOFMT
 	$(eval GOFMT_OUTPUT := $(shell gofmt -d -s api/ model/ store/ utils/ manualtesting/ einterfaces/ mattermost.go 2>&1))
@@ -242,11 +242,11 @@ build-linux: .prebuild prepare-enterprise
 
 build-osx: .prebuild prepare-enterprise
 	@echo Build OSX amd64
-	env GOOS=darwin GOARCH=amd64 $(GO) install $(GOFLAGS) $(GO_LINKER_FLAGS) $(go list ./... | grep -v /vendor/) 
+	env GOOS=darwin GOARCH=amd64 $(GO) install $(GOFLAGS) $(GO_LINKER_FLAGS) $(go list ./... | grep -v /vendor/)
 
 build-windows: .prebuild prepare-enterprise
 	@echo Build Windows amd64
-	env GOOS=windows GOARCH=amd64 $(GO) install $(GOFLAGS) $(GO_LINKER_FLAGS) $(go list ./... | grep -v /vendor/) 
+	env GOOS=windows GOARCH=amd64 $(GO) install $(GOFLAGS) $(GO_LINKER_FLAGS) $(go list ./... | grep -v /vendor/)
 
 build: build-linux build-windows build-osx
 
