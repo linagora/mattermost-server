@@ -398,6 +398,15 @@ export default class AdminSidebar extends React.Component {
                                         />
                                     }
                                 />
+                                <AdminSidebarSection
+                                    name='go_ldap'
+                                    title={
+                                        <FormattedMessage
+                                            id='admin.sidebar.goLdap'
+                                            defaultMessage='LDAP'
+                                        />
+                                    }
+                                />
                                 {oauthSettings}
                                 {ldapSettings}
                                 {samlSettings}
