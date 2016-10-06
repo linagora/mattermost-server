@@ -16,6 +16,7 @@ import EmailAuthenticationSettings from 'components/admin_console/email_authenti
 import GitLabSettings from 'components/admin_console/gitlab_settings.jsx';
 import OAuthSettings from 'components/admin_console/oauth_settings.jsx';
 import LdapSettings from 'components/admin_console/ldap_settings.jsx';
+import GoLdapSettings from 'components/admin_console/go_ldap.jsx';
 import SamlSettings from 'components/admin_console/saml_settings.jsx';
 import ClusterSettings from 'components/admin_console/cluster_settings.jsx';
 import SignupSettings from 'components/admin_console/signup_settings.jsx';
@@ -98,6 +99,10 @@ export default (
             <Route
                 path='ldap'
                 component={LdapSettings}
+            />
+            <Route
+                path='go_ldap'
+                component={GoLdapSettings}
             />
             <Route
                 path='saml'
