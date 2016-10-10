@@ -57,7 +57,7 @@ func CreateTeamWithUser(team *model.Team, userId string) (*model.Team, *model.Ap
 func isTeamEmailAllowed(user *model.User) bool {
 	email := strings.ToLower(user.Email)
 
-	if len(user.AuthService) > 0 && len(*user.AuthData) > 0 {
+	if len(user.AuthService) > 0 {
 		return true
 	}
 
