@@ -11,6 +11,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/go-ldap/ldap"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -509,4 +510,33 @@ func CleanUsername(s string) string {
 	}
 
 	return s
+}
+
+func LdapToUser(result *ldap.Entry) *User {
+	attr := make(map[string]string)
+
+	attr["dn"] = result.DN
+	for _, attribute := range result.Attributes {
+		attr[attribute.Name] = attribute.Values[0]
+		if attribute.Name == "cn" {
+			s := strings.Split(attribute.Values[0], " ")
+			attr["FirstName"] = s[0]
+			attr["LastName"] = s[1]
+		}
+	}
+
+	var user = &User{
+		Username:      attr["uid"],
+		Password:      "",
+		AuthService:   "ldap",
+		Email:         attr["mail"],
+		EmailVerified: false,
+		Nickname:      attr["displayName"],
+		FirstName:     attr["FirstName"],
+		LastName:      attr["LastName"],
+		Roles:         "team_user",
+		Locale:        DEFAULT_LOCALE,
+	}
+
+	return user
 }
