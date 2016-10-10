@@ -79,9 +79,9 @@ func isTeamEmailAddressAllowed(email string) bool {
 func isTeamEmailAllowed(user *model.User) bool {
 	email := strings.ToLower(user.Email)
 
-	if len(user.AuthService) > 0 && len(*user.AuthData) > 0 {
+	/*if len(user.AuthService) > 0 && len(*user.AuthData) > 0 {
 		return true
-	}
+	}*/
 
 	return isTeamEmailAddressAllowed(email)
 }
@@ -629,7 +629,7 @@ func InviteNewUsersToTeam(emailList []string, teamId, senderId string) *model.Ap
 	var invalidEmailList []string
 
 	for _, email := range emailList {
-		if ! isTeamEmailAddressAllowed(email) {
+		if !isTeamEmailAddressAllowed(email) {
 			invalidEmailList = append(invalidEmailList, email)
 		}
 	}

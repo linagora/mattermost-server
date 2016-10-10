@@ -4,7 +4,8 @@ import {ConnectionSecurityDropdownSettingLdap} from './connection_security_dropd
 import SettingsGroup from './settings_group.jsx';
 import TextSetting from './text_setting.jsx';
 
-import LdapTestButton from './ldap_test_button.jsx';
+import ldapTest from 'actions/admin_actions.jsx';
+import RequestButton from './request_button/request_button.jsx';
 
 import * as Utils from 'utils/utils.jsx';
 
@@ -422,10 +423,31 @@ export default class GoLdapSettings extends AdminSettings {
                     onChange={this.handleChange}
                     disabled={!this.state.enable}
                 />
-                <LdapTestButton
+                <RequestButton
+                    requestAction={ldapTest}
+                    helpText={
+                        <FormattedMessage
+                            id='admin.ldap.testHelpText'
+                            defaultMessage='Tests if the Mattermost server can connect to the AD/LDAP server specified. See log file for more detailed error messages.'
+                        />
+                    }
+                    buttonText={
+                        <FormattedMessage
+                            id='admin.ldap.ldap_test_button'
+                            defaultMessage='AD/LDAP Test'
+                        />
+                    }
                     disabled={!this.state.enable}
-                    submitFunction={this.doSubmit}
                     saveNeeded={this.state.saveNeeded}
+                    saveConfigAction={this.doSubmit}
+                    errorMessage={{
+                        id: 'admin.ldap.testFailure',
+                        defaultMessage: 'AD/LDAP Test Failure: {error}'
+                    }}
+                    successMessage={{
+                        id: 'admin.ldap.testSuccess',
+                        defaultMessage: 'AD/LDAP Test Successful'
+                    }}
                 />
             </SettingsGroup>
         );
