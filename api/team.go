@@ -368,7 +368,7 @@ func isTeamCreationAllowed(c *Context, email string) bool {
 
 	if result := <-Srv.Store.User().GetByEmail(email); result.Err == nil {
 		user := result.Data.(*model.User)
-		if len(user.AuthService) > 0 && len(*user.AuthData) > 0 {
+		if len(user.AuthService) > 0 {
 			return true
 		}
 	}
