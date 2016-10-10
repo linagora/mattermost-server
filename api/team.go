@@ -77,6 +77,11 @@ func GetAllTeamListings(c *Context, w http.ResponseWriter, r *http.Request) {
 	if teams, err = app.GetAllOpenTeams(); err != nil {
 		c.Err = err
 		return
+	/*if result := <-Srv.Store.User().GetByEmail(email); result.Err == nil {
+		user := result.Data.(*model.User)
+		if len(user.AuthService) > 0 {
+			return true
+		}*/
 	}
 
 	m := make(map[string]*model.Team)

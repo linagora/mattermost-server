@@ -5,8 +5,10 @@ package app
 
 import (
 	"net/http"
+	"strconv"
 
 	l4g "github.com/alecthomas/log4go"
+	"github.com/go-ldap/ldap"
 	"github.com/mattermost/platform/einterfaces"
 	"github.com/mattermost/platform/model"
 	"github.com/mattermost/platform/utils"
@@ -25,11 +27,15 @@ func SyncLdap() {
 }
 
 func TestLdap() *model.AppError {
-	if ldapI := einterfaces.GetLdapInterface(); ldapI != nil && utils.IsLicensed && *utils.License.Features.LDAP && *utils.Cfg.LdapSettings.Enable {
-		if err := ldapI.RunTest(); err != nil {
-			err.StatusCode = 500
+	if *utils.Cfg.LdapSettings.Enable {
+		ldapServer := *utils.Cfg.LdapSettings.LdapServer + ":" + strconv.Itoa(*utils.Cfg.LdapSettings.LdapPort)
+		conn, err := ldap.Dial("tcp", ldapServer)
+		if err != nil {
+			err := model.NewLocAppError("ldapTest", "ent.ldap.no.connection", nil, "")
+			err.StatusCode = http.StatusNotFound
 			return err
 		}
+		conn.Close()
 	} else {
 		err := model.NewLocAppError("TestLdap", "ent.ldap.disabled.app_error", nil, "")
 		err.StatusCode = http.StatusNotImplemented
