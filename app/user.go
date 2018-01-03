@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/disintegration/imaging"
+	"github.com/go-ldap/ldap"
 	"github.com/golang/freetype"
 	"github.com/golang/freetype/truetype"
 	"github.com/mattermost/mattermost-server/einterfaces"
@@ -388,6 +389,45 @@ func (a *App) GetUsers(offset int, limit int) ([]*model.User, *model.AppError) {
 		return nil, result.Err
 	} else {
 		return result.Data.([]*model.User), nil
+	}
+}
+
+func (a *App) GetUserByLdap(loginId string) (*model.User, *model.AppError) {
+	ldapServer := *a.Config().LdapSettings.LdapServer + ":" + strconv.Itoa(*a.Config().LdapSettings.LdapPort)
+
+	conn, errorDial := ldap.Dial("tcp", ldapServer)
+	if errorDial != nil {
+		errorD := model.NewAppError("ldapTest", "ent.ldap.do_login.unable_to_connect.app_error", nil, "", http.StatusNotFound)
+		conn.Close()
+		return nil, errorD
+	}
+
+	searchRequest := ldap.NewSearchRequest(
+		*a.Config().LdapSettings.BaseDN,
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		"(&(mail="+loginId+"))",
+		[]string{"*"},
+		nil,
+	)
+
+	sr, errorSearch := conn.Search(searchRequest)
+	if errorSearch != nil {
+		errorS := model.NewAppError("ldapTest", "ent.ldap.do_login.search_ldap_server.app_error", nil, "", http.StatusNotFound)
+		conn.Close()
+		return nil, errorS
+	}
+
+	conn.Close()
+
+	if len(sr.Entries) > 1 {
+		errMulti := model.NewAppError("LoginByLdap", "ent.ldap.do_login.matched_to_many_users.app_error", nil, "", http.StatusNotFound)
+		return nil, errMulti
+	} else if len(sr.Entries) == 0 {
+		errNoUser := model.NewAppError("LoginByLdap", "api.user.login.invalid_credentials", nil, "", http.StatusUnauthorized)
+		return nil, errNoUser
+	} else {
+		user := model.LdapToUser(sr.Entries[0])
+		return user, nil
 	}
 }
 

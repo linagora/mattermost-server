@@ -6,7 +6,9 @@ package app
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
+	"github.com/go-ldap/ldap"
 	"github.com/mattermost/mattermost-server/mlog"
 	"github.com/mattermost/mattermost-server/model"
 	"github.com/mattermost/mattermost-server/utils"
@@ -26,12 +28,14 @@ func (a *App) SyncLdap() {
 }
 
 func (a *App) TestLdap() *model.AppError {
-	license := a.License()
-	if ldapI := a.Ldap; ldapI != nil && license != nil && *license.Features.LDAP && (*a.Config().LdapSettings.Enable || *a.Config().LdapSettings.EnableSync) {
-		if err := ldapI.RunTest(); err != nil {
-			err.StatusCode = 500
+	if *a.Config().LdapSettings.Enable || *a.Config().LdapSettings.EnableSync {
+		ldapServer := *a.Config().LdapSettings.LdapServer + ":" + strconv.Itoa(*a.Config().LdapSettings.LdapPort)
+		conn, err := ldap.Dial("tcp", ldapServer)
+		if err != nil {
+			err := model.NewAppError("ldapTest", "ent.ldap.do_login.unable_to_connect.app_error", nil, "", http.StatusNotFound)
 			return err
 		}
+		conn.Close()
 	} else {
 		err := model.NewAppError("TestLdap", "ent.ldap.disabled.app_error", nil, "", http.StatusNotImplemented)
 		return err

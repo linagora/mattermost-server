@@ -11,7 +11,6 @@ import (
 
 	"github.com/avct/uasurfer"
 	"github.com/mattermost/mattermost-server/model"
-	"github.com/mattermost/mattermost-server/store"
 )
 
 func (a *App) CheckForClienSideCert(r *http.Request) (string, string, string) {
@@ -68,38 +67,34 @@ func (a *App) AuthenticateUserForLogin(id, loginId, password, mfaToken string, l
 	return user, nil
 }
 
-func (a *App) GetUserForLogin(id, loginId string) (*model.User, *model.AppError) {
-	enableUsername := *a.Config().EmailSettings.EnableSignInWithUsername
-	enableEmail := *a.Config().EmailSettings.EnableSignInWithEmail
+func (a *App) GetUserForLogin(userId string, loginId string) (*model.User, *model.AppError) {
+	ldapAvailable := *a.Config().LdapSettings.Enable
 
-	// If we are given a userID then fail if we can't find a user with that ID
-	if len(id) != 0 {
-		if user, err := a.GetUser(id); err != nil {
-			if err.Id != store.MISSING_ACCOUNT_ERROR {
-				err.StatusCode = http.StatusInternalServerError
-				return nil, err
-			} else {
-				err.StatusCode = http.StatusBadRequest
-				return nil, err
-			}
-		} else {
-			return user, nil
+	if result := <-a.Srv.Store.User().GetForLogin(
+		loginId,
+		*a.Config().EmailSettings.EnableSignInWithUsername && !ldapAvailable,
+		*a.Config().EmailSettings.EnableSignInWithEmail && !ldapAvailable,
+	); result.Err != nil && result.Err.Id == "store.sql_user.get_for_login.multiple_users" {
+		// don't fall back to LDAP in this case since we already know there's an LDAP user, but that it shouldn't work
+		result.Err.StatusCode = http.StatusBadRequest
+		return nil, result.Err
+	} else if result.Err != nil {
+		if !ldapAvailable {
+			// failed to find user and no LDAP server to fall back on
+			result.Err.StatusCode = http.StatusBadRequest
+			return nil, result.Err
 		}
-	}
 
-	// Try to get the user by username/email
-	if result := <-a.Srv.Store.User().GetForLogin(loginId, enableUsername, enableEmail); result.Err == nil {
+		// fall back to LDAP server to see if we can find a user
+		if ldapUser, ldapErr := a.GetUserByLdap(loginId); ldapErr != nil {
+			ldapErr.StatusCode = http.StatusBadRequest
+			return nil, ldapErr
+		} else {
+			return ldapUser, nil
+		}
+	} else {
 		return result.Data.(*model.User), nil
 	}
-
-	// Try to get the user with LDAP if enabled
-	if *a.Config().LdapSettings.Enable && a.Ldap != nil {
-		if user, err := a.Ldap.GetUser(loginId); err == nil {
-			return user, nil
-		}
-	}
-
-	return nil, model.NewAppError("GetUserForLogin", "store.sql_user.get_for_login.app_error", nil, "", http.StatusBadRequest)
 }
 
 func (a *App) DoLogin(w http.ResponseWriter, r *http.Request, user *model.User, deviceId string) (*model.Session, *model.AppError) {
