@@ -23,6 +23,7 @@ import (
 
 	l4g "github.com/alecthomas/log4go"
 	"github.com/disintegration/imaging"
+	"github.com/go-ldap/ldap"
 	"github.com/golang/freetype"
 	"github.com/mattermost/mattermost-server/einterfaces"
 	"github.com/mattermost/mattermost-server/model"
@@ -374,7 +375,7 @@ func (a *App) GetUserByAuth(authData *string, authService string) (*model.User, 
 }
 
 func (a *App) GetUserForLogin(loginId string, onlyLdap bool) (*model.User, *model.AppError) {
-	ldapAvailable := *a.Config().LdapSettings.Enable && a.Ldap != nil && utils.IsLicensed() && *utils.License().Features.LDAP
+	ldapAvailable := *a.Config().LdapSettings.Enable
 
 	if result := <-a.Srv.Store.User().GetForLogin(
 		loginId,
@@ -393,7 +394,7 @@ func (a *App) GetUserForLogin(loginId string, onlyLdap bool) (*model.User, *mode
 		}
 
 		// fall back to LDAP server to see if we can find a user
-		if ldapUser, ldapErr := a.Ldap.GetUser(loginId); ldapErr != nil {
+		if ldapUser, ldapErr := GetUserByLdap(loginId); ldapErr != nil {
 			ldapErr.StatusCode = http.StatusBadRequest
 			return nil, ldapErr
 		} else {
@@ -409,6 +410,45 @@ func (a *App) GetUsers(offset int, limit int) ([]*model.User, *model.AppError) {
 		return nil, result.Err
 	} else {
 		return result.Data.([]*model.User), nil
+	}
+}
+
+func GetUserByLdap(loginId string) (*model.User, *model.AppError) {
+	ldapServer := *utils.Cfg.LdapSettings.LdapServer + ":" + strconv.Itoa(*utils.Cfg.LdapSettings.LdapPort)
+
+	conn, errorDial := ldap.Dial("tcp", ldapServer)
+	if errorDial != nil {
+		errorD := model.NewAppError("ldapTest", "ent.ldap.do_login.unable_to_connect.app_error", nil, "", http.StatusNotFound)
+		conn.Close()
+		return nil, errorD
+	}
+
+	searchRequest := ldap.NewSearchRequest(
+		*utils.Cfg.LdapSettings.BaseDN,
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		"(&(mail="+loginId+"))",
+		[]string{"*"},
+		nil,
+	)
+
+	sr, errorSearch := conn.Search(searchRequest)
+	if errorSearch != nil {
+		errorS := model.NewAppError("ldapTest", "ent.ldap.do_login.search_ldap_server.app_error", nil, "", http.StatusNotFound)
+		conn.Close()
+		return nil, errorS
+	}
+
+	conn.Close()
+
+	if len(sr.Entries) > 1 {
+		errMulti := model.NewAppError("LoginByLdap", "ent.ldap.do_login.matched_to_many_users.app_error", nil, "", http.StatusNotFound)
+		return nil, errMulti
+	} else if len(sr.Entries) == 0 {
+		errNoUser := model.NewAppError("LoginByLdap", "api.user.login.invalid_credentials", nil, "", http.StatusUnauthorized)
+		return nil, errNoUser
+	} else {
+		user := model.LdapToUser(sr.Entries[0])
+		return user, nil
 	}
 }
 

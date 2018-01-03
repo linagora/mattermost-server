@@ -5,8 +5,10 @@ package app
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
+	"github.com/go-ldap/ldap"
 	"github.com/mattermost/mattermost-server/model"
 	"github.com/mattermost/mattermost-server/utils"
 )
@@ -139,13 +141,13 @@ func checkUserNotDisabled(user *model.User) *model.AppError {
 }
 
 func (a *App) authenticateUser(user *model.User, password, mfaToken string) (*model.User, *model.AppError) {
-	ldapAvailable := *a.Config().LdapSettings.Enable && a.Ldap != nil && utils.IsLicensed() && *utils.License().Features.LDAP
+	ldapAvailable := *a.Config().LdapSettings.Enable
 
 	if user.AuthService == model.USER_AUTH_SERVICE_LDAP {
 		if !ldapAvailable {
 			err := model.NewAppError("login", "api.user.login_ldap.not_available.app_error", nil, "", http.StatusNotImplemented)
 			return user, err
-		} else if ldapUser, err := a.checkLdapUserPasswordAndAllCriteria(user.AuthData, password, mfaToken); err != nil {
+		} else if ldapUser, err := a.checkLdapAuthentification(user, password); err != nil {
 			err.StatusCode = http.StatusUnauthorized
 			return user, err
 		} else {
@@ -167,4 +169,34 @@ func (a *App) authenticateUser(user *model.User, password, mfaToken string) (*mo
 			return user, nil
 		}
 	}
+}
+
+func (a *App) checkLdapAuthentification(user *model.User, password string) (*model.User, *model.AppError) {
+	ldapServer := *utils.Cfg.LdapSettings.LdapServer + ":" + strconv.Itoa(*utils.Cfg.LdapSettings.LdapPort)
+
+	conn, errorDial := ldap.Dial("tcp", ldapServer)
+	if errorDial != nil {
+		errorD := model.NewAppError("ldapTest", "ent.ldap.do_login.unable_to_connect.app_error", nil, "", http.StatusNotFound)
+		return nil, errorD
+	}
+	if err := conn.Bind("uid="+user.Username+","+*utils.Cfg.LdapSettings.BaseDN, password); err != nil {
+		errBind := model.NewAppError("checkUserPassword", "api.user.login.invalid_credentials", nil, "user_id="+user.Id, http.StatusUnauthorized)
+		return nil, errBind
+	} else {
+		if errCheck := checkUserNotDisabled(user); errCheck != nil {
+			errCheck = model.NewAppError("login", "api.user.login_ldap.not_available.app_error", nil, "", http.StatusNotFound)
+			return nil, errCheck
+		}
+
+		if result := <-a.Srv.Store.User().GetByEmail(user.Email); result.Err != nil {
+			UserCreated, errCreation := a.createUser(user)
+			if errCreation != nil {
+				return nil, errCreation
+			}
+			return UserCreated, nil
+		} else {
+			return result.Data.(*model.User), nil
+		}
+	}
+	return user, nil
 }
